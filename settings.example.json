@@ -1,0 +1,12 @@
+{
+  "ip_sources": [
+    "https://api.ipify.org",
+    "https://ifconfig.me/ip",
+    "https://icanhazip.com",
+    "https://api4.my-ip.io/ip",
+    "https://checkip.amazonaws.com"
+  ],
+  "request_timeout_seconds": 5,
+  "response_max_bytes": 256,
+  "response_regex": "\\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b"
+}

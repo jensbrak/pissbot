@@ -1,0 +1,12 @@
+# Compiled binaries
+*.exe
+*.exe~
+
+# Log files
+*.log
+
+# Local settings — copy settings.example.json to settings.json and edit
+settings.json
+
+# Build output
+dist/
