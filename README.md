@@ -112,11 +112,15 @@ task build    # confirm the toolchain works
 
 ## Releasing
 
+Releases use [semantic versioning](https://semver.org) with a `v` prefix
+(`v1.2.3`). Tags must be annotated so the tag carries its own release message
+independent of the commit it points at.
+
 1. Ensure the working tree is clean and all changes are committed.
-2. Create and push a git tag:
+2. Create an annotated tag and push it:
 
    ```bash
-   git tag v0.1.0
+   git tag -a v0.1.0
    git push origin v0.1.0
    ```
 
@@ -128,6 +132,35 @@ task build    # confirm the toolchain works
 
    Binaries land in `dist/` — `pissbot.exe` (Windows) and `pissbot` (Linux),
    both stamped with the tag via `-version`.
+
+---
+
+## VS Code
+
+The repo includes a `.vscode/` directory with workspace configuration.
+VS Code will prompt to install the recommended extensions on first open.
+
+| Extension | Purpose |
+|---|---|
+| `golang.go` | Go language support — IntelliSense, navigation, debugging, testing |
+| `redhat.vscode-yaml` | YAML support for `Taskfile.yml` |
+
+**Format on save** is enabled using `goimports`, which formats code and
+automatically manages import statements on every save.
+
+**Debugging** — two launch configurations are provided:
+
+- *pissbot (console)* — runs the bot in console mode. `DiscordToken` is
+  inherited from the environment VS Code was launched from, and `-settings`
+  points at `settings.json` in the workspace root. Ensure both exist before
+  starting a debug session.
+- *test (current package)* — debugs the tests in whichever package the
+  active file belongs to.
+
+**Note on build tag warnings** — `gopls` analyses only the files that apply
+to the current platform. On Windows, `service_linux.go` will show errors;
+on Linux, `service_windows.go` will. This is expected and does not affect
+the build.
 
 ---
 
@@ -362,6 +395,7 @@ pissbot/
 ├── main.go                          # entry point, App lifecycle, CLI flags
 ├── go.mod
 ├── Taskfile.yml                     # build, test, and release tasks
+├── .vscode/                         # VS Code workspace config (extensions, settings, debug)
 ├── settings.example.json            # template — copy to settings.json and edit
 ├── LICENSE
 ├── internal/
