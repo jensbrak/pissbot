@@ -1,0 +1,77 @@
+version: '3'
+
+vars:
+  # Resolved at build time from the nearest git tag, e.g.:
+  #   v0.1.0                    — clean build on a tagged commit
+  #   v0.1.0-3-gabcd123         — 3 commits after the tag
+  #   v0.1.0-3-gabcd123-dirty   — uncommitted changes present
+  VERSION:
+    sh: git describe --tags --always --dirty
+  LDFLAGS: '-s -w -X main.version={{.VERSION}}'
+
+tasks:
+  default:
+    desc: List available tasks
+    silent: true
+    cmds:
+      - task --list
+
+  # ── Development ─────────────────────────────────────────────────────────────
+
+  build:
+    desc: Build for the current platform (version=dev, unstripped — for local iteration)
+    cmds:
+      - go build -o pissbot{{exeExt}} .
+
+  test:
+    desc: Run all tests
+    cmds:
+      - go test ./...
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet ./...
+
+  check:
+    desc: Run vet and tests
+    deps: [vet, test]
+
+  tidy:
+    desc: Tidy module dependencies
+    cmds:
+      - go mod tidy
+
+  # ── Release ──────────────────────────────────────────────────────────────────
+
+  build:windows:
+    desc: Cross-compile a release binary for Windows (amd64) → dist/pissbot.exe
+    deps: [_mkdist]
+    env:
+      GOOS: windows
+      GOARCH: amd64
+    cmds:
+      - go build -ldflags="{{.LDFLAGS}}" -o dist/pissbot.exe .
+
+  build:linux:
+    desc: Cross-compile a release binary for Linux (amd64) → dist/pissbot
+    deps: [_mkdist]
+    env:
+      GOOS: linux
+      GOARCH: amd64
+    cmds:
+      - go build -ldflags="{{.LDFLAGS}}" -o dist/pissbot .
+
+  release:
+    desc: Build release binaries for all platforms. Tag first — see README Releasing section.
+    deps: [build:windows, build:linux]
+
+  # ── Internal ─────────────────────────────────────────────────────────────────
+
+  _mkdist:
+    internal: true
+    cmds:
+      - cmd: mkdir -p dist
+        platforms: [linux, darwin]
+      - cmd: if not exist dist mkdir dist
+        platforms: [windows]

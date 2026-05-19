@@ -79,21 +79,55 @@ Settings are read at startup. Restart the bot to pick up changes.
 
 ## Build
 
-**Windows (native):**
-
-```powershell
-go mod tidy        # first time: fetch dependencies
-go build -ldflags="-s -w -X main.version=1.0.0" -o pissbot.exe .
-```
-
-**Linux (native or cross-compiled from any OS):**
+Builds are managed with [Task](https://taskfile.dev). Install it once:
 
 ```bash
-GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -X main.version=1.0.0" -o pissbot .
+go install github.com/go-task/task/v3/cmd/task@latest
 ```
 
-`-ldflags="-s -w"` strips debug info (~30% smaller binary).
-`-X main.version=...` sets the version reported by `pissbot -version`.
+| Command | What it does |
+|---|---|
+| `task build` | Fast dev build for the current platform (`-version` reports `dev`) |
+| `task build:windows` | Cross-compiled Windows release binary → `dist/pissbot.exe` |
+| `task build:linux` | Cross-compiled Linux release binary → `dist/pissbot` |
+| `task release` | Both platform release binaries (tag first — see *Releasing* below) |
+| `task check` | `go vet` + `go test` |
+| `task tidy` | `go mod tidy` |
+
+Run `task` with no arguments to list all available tasks.
+
+Release builds inject the version from the nearest git tag via
+`git describe --tags --always --dirty`, so the binary reports `v0.1.0`,
+`v0.1.0-3-gabcd123`, or `v0.1.0-3-gabcd123-dirty` depending on whether the
+working tree is clean and on a tagged commit.
+
+**First-time setup:**
+
+```bash
+go mod tidy   # fetch dependencies
+task build    # confirm the toolchain works
+```
+
+---
+
+## Releasing
+
+1. Ensure the working tree is clean and all changes are committed.
+2. Create and push a git tag:
+
+   ```bash
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+
+3. Build the release binaries:
+
+   ```bash
+   task release
+   ```
+
+   Binaries land in `dist/` — `pissbot.exe` (Windows) and `pissbot` (Linux),
+   both stamped with the tag via `-version`.
 
 ---
 
@@ -327,6 +361,7 @@ sudo systemctl start pissbot
 pissbot/
 ├── main.go                          # entry point, App lifecycle, CLI flags
 ├── go.mod
+├── Taskfile.yml                     # build, test, and release tasks
 ├── settings.example.json            # template — copy to settings.json and edit
 ├── LICENSE
 ├── internal/
