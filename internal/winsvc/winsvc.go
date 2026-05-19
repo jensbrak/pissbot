@@ -82,9 +82,11 @@ func RunService(name string, isDebug bool, app appStarter, logger *slog.Logger) 
 // All functions below require an elevated (Administrator) process.
 
 // Install registers the service with the SCM. exePath must be the absolute
-// path to the pissbot executable. The service is configured for automatic
-// start so it launches on every system boot.
-func Install(exePath string) error {
+// path to the pissbot executable. Any args are appended to the ImagePath
+// command line so the SCM passes them to the process on every start — use
+// this to permanently bake in flags such as -settings and -log.
+// The service is configured for automatic start so it launches on every boot.
+func Install(exePath string, args ...string) error {
 	m, err := mgr.Connect()
 	if err != nil {
 		return fmt.Errorf("connect to SCM: %w", err)
@@ -101,7 +103,7 @@ func Install(exePath string) error {
 		DisplayName: SvcDisplayName,
 		Description: SvcDescription,
 		StartType:   mgr.StartAutomatic,
-	})
+	}, args...)
 	if err != nil {
 		return fmt.Errorf("create service: %w", err)
 	}

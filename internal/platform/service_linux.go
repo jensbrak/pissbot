@@ -50,7 +50,7 @@ func RunAsService(app Starter, logger *slog.Logger) error {
 
 // HandleSCMFlags is a no-op on Linux. systemd services are managed via
 // systemctl and .service unit files, not CLI sub-commands.
-func HandleSCMFlags(install, uninstall, start, stop bool) (bool, error) {
+func HandleSCMFlags(install, uninstall, start, stop bool, _ []string) (bool, error) {
 	return false, nil
 }
 

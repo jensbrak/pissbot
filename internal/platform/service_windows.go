@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/sys/windows/svc"
 
@@ -17,8 +18,15 @@ const maxLogBytes int64 = 10 << 20 // 10 MiB
 
 // ServiceLogger opens the log file at logPath (rotating it first if it exceeds
 // maxLogBytes) and returns a slog.Logger writing to that file, plus a closer
-// that must be called when the process exits.
+// that must be called when the process exits. When logPath is empty the
+// platform default is used: %ProgramData%\pissbot\pissbot.log.
 func ServiceLogger(logPath string) (*slog.Logger, func(), error) {
+	if logPath == "" {
+		logPath = defaultLogPath()
+	}
+	if err := os.MkdirAll(filepath.Dir(logPath), 0755); err != nil {
+		return nil, nil, fmt.Errorf("create log directory: %w", err)
+	}
 	rotateLogs(logPath)
 	f, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
@@ -26,6 +34,16 @@ func ServiceLogger(logPath string) (*slog.Logger, func(), error) {
 	}
 	logger := slog.New(slog.NewTextHandler(f, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	return logger, func() { f.Close() }, nil
+}
+
+// defaultLogPath returns %ProgramData%\pissbot\pissbot.log, falling back to
+// C:\ProgramData if the environment variable is not set.
+func defaultLogPath() string {
+	programData := os.Getenv("ProgramData")
+	if programData == "" {
+		programData = `C:\ProgramData`
+	}
+	return filepath.Join(programData, "pissbot", "pissbot.log")
 }
 
 // rotateLogs renames logPath to logPath+".1" when the file exceeds maxLogBytes,
@@ -51,15 +69,16 @@ func RunAsService(app Starter, logger *slog.Logger) error {
 }
 
 // HandleSCMFlags processes Windows service sub-commands. It returns true if a
-// flag was handled, in which case the caller should exit.
-func HandleSCMFlags(install, uninstall, start, stop bool) (bool, error) {
+// flag was handled, in which case the caller should exit. installArgs are
+// baked into the service's ImagePath so the SCM passes them on every start.
+func HandleSCMFlags(install, uninstall, start, stop bool, installArgs []string) (bool, error) {
 	switch {
 	case install:
 		exePath, err := os.Executable()
 		if err != nil {
 			return true, fmt.Errorf("resolve exe path: %w", err)
 		}
-		if err := winsvc.Install(exePath); err != nil {
+		if err := winsvc.Install(exePath, installArgs...); err != nil {
 			return true, fmt.Errorf("install: %w", err)
 		}
 		fmt.Printf("Service %q installed successfully.\n", winsvc.SvcName)

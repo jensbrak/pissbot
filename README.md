@@ -154,6 +154,16 @@ path at install time.
 .\pissbot.exe -install
 ```
 
+Logs are written to `%ProgramData%\pissbot\pissbot.log` by default
+(e.g. `C:\ProgramData\pissbot\pissbot.log`). The directory is created
+automatically on first start. Any flags passed at install time are baked
+into the service registration and used on every subsequent start:
+
+```powershell
+# Custom settings and log paths — baked in permanently at install time:
+.\pissbot.exe -install -settings D:\conf\settings.json -log D:\logs\pissbot.log
+```
+
 ### 3. Start / stop
 
 ```powershell
@@ -265,7 +275,7 @@ sudo userdel pissbot
 
 | Context | Destination | Rotation |
 |---|---|---|
-| Windows service | `pissbot.log` next to the executable | Renamed to `pissbot.log.1` on startup when > 10 MiB (one backup kept) |
+| Windows service | `%ProgramData%\pissbot\pissbot.log` (override with `-log <path>`) | Renamed to `.log.1` on startup when > 10 MiB (one backup kept) |
 | Linux service | stdout → journald | Managed by journald (`SystemMaxUse` in `journald.conf`) |
 | Console (both) | stdout | — |
 

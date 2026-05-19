@@ -23,4 +23,6 @@ func RunAsService(_ Starter, _ *slog.Logger) error { return nil }
 
 // HandleSCMFlags is a no-op. The -install, -start, -stop and -uninstall flags
 // are accepted but silently ignored on this platform.
-func HandleSCMFlags(install, uninstall, start, stop bool) (bool, error) { return false, nil }
+func HandleSCMFlags(install, uninstall, start, stop bool, _ []string) (bool, error) {
+	return false, nil
+}

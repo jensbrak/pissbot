@@ -9,13 +9,17 @@
 //	pissbot                  # console mode (Ctrl+C to stop)
 //	pissbot -version         # print version and exit
 //	pissbot -settings <path> # override the settings.json location
+//	pissbot -log <path>      # override the service-mode log file (Windows only)
 //
 // Windows-only service management (requires elevation):
 //
-//	pissbot -install         # register as a Windows service
-//	pissbot -start           # start the installed service
-//	pissbot -stop            # stop the running service
-//	pissbot -uninstall       # remove the service
+//	pissbot -install [-settings <p>] [-log <p>]  # register as a Windows service
+//	pissbot -start                               # start the installed service
+//	pissbot -stop                                # stop the running service
+//	pissbot -uninstall                           # remove the service
+//
+// Flags passed alongside -install are baked into the service's ImagePath and
+// replayed automatically by the SCM on every subsequent start.
 package main
 
 import (
@@ -97,6 +101,7 @@ func main() {
 		flagStart     = flag.Bool("start", false, "start the Windows service")
 		flagStop      = flag.Bool("stop", false, "stop the Windows service")
 		flagSettings  = flag.String("settings", "", "path to settings.json (default: <exe directory>/settings.json)")
+		flagLog       = flag.String("log", "", "log file path for Windows service mode (no effect on Linux; default: %ProgramData%\\pissbot\\pissbot.log)")
 	)
 	flag.Parse()
 
@@ -107,8 +112,18 @@ func main() {
 
 	settingsPath := resolveSettingsPath(*flagSettings)
 
+	// Collect flags that should be baked into the service ImagePath on install
+	// so the SCM passes them automatically on every subsequent start.
+	var installArgs []string
+	if *flagSettings != "" {
+		installArgs = append(installArgs, "-settings", *flagSettings)
+	}
+	if *flagLog != "" {
+		installArgs = append(installArgs, "-log", *flagLog)
+	}
+
 	// Handle platform service management commands (no-op on non-Windows).
-	handled, err := platform.HandleSCMFlags(*flagInstall, *flagUninstall, *flagStart, *flagStop)
+	handled, err := platform.HandleSCMFlags(*flagInstall, *flagUninstall, *flagStart, *flagStop, installArgs)
 	if err != nil {
 		fatalf("%v", err)
 	}
@@ -123,7 +138,7 @@ func main() {
 	}
 
 	if inService {
-		runAsService(settingsPath)
+		runAsService(settingsPath, *flagLog)
 	} else {
 		runAsConsole(settingsPath)
 	}
@@ -158,15 +173,8 @@ func runAsConsole(settingsPath string) {
 	logger.Info("done")
 }
 
-func runAsService(settingsPath string) {
-	exePath, err := os.Executable()
-	if err != nil {
-		os.Exit(1)
-	}
-
-	logger, closeLog, err := platform.ServiceLogger(
-		filepath.Join(filepath.Dir(exePath), "pissbot.log"),
-	)
+func runAsService(settingsPath, logPath string) {
+	logger, closeLog, err := platform.ServiceLogger(logPath)
 	if err != nil {
 		os.Exit(1)
 	}
