@@ -71,7 +71,4 @@ tasks:
   _mkdist:
     internal: true
     cmds:
-      - cmd: mkdir -p dist
-        platforms: [linux, darwin]
-      - cmd: if not exist dist mkdir dist
-        platforms: [windows]
+      - mkdir -p dist
