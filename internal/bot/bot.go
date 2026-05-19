@@ -17,6 +17,12 @@ type IPGetter interface {
 	GetPublicIP(ctx context.Context) (ip, source string, err error)
 }
 
+// messageSender is the subset of *discordgo.Session used by handlePiss.
+// The narrow interface allows the handler to be tested without a live session.
+type messageSender interface {
+	ChannelMessageSendComplex(channelID string, data *discordgo.MessageSend, options ...discordgo.RequestOption) (*discordgo.Message, error)
+}
+
 // Bot manages the Discord connection and message handling.
 type Bot struct {
 	session *discordgo.Session
@@ -87,7 +93,7 @@ func (b *Bot) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	go b.handlePiss(s, m)
 }
 
-func (b *Bot) handlePiss(s *discordgo.Session, m *discordgo.MessageCreate) {
+func (b *Bot) handlePiss(s messageSender, m *discordgo.MessageCreate) {
 	// Give the whole operation (IP fetch + Discord send) 15 seconds.
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()

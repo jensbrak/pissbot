@@ -70,27 +70,35 @@ the packages they cover, table-driven tests, no external test framework.
 distribution (`go test ./...`, `-race`, `-cover`) and requires no setup. The
 codebase has clear seams that are already testable:
 
-- `ipservice` — pure HTTP logic; `net/http/httptest.NewServer` provides a
-  local mock endpoint with no mocking framework needed.
-- `bot` — `IPGetter` is already an interface, so a lightweight test double
-  can be substituted for the real IP service without any extra infrastructure.
+- `ipservice` — **done.** `internal/ipservice/ipservice_test.go` covers
+  `LoadSettings` (7 subtests: valid config, zero defaults, empty/missing
+  sources, invalid regex, invalid JSON, file not found) and `GetPublicIP`
+  (8 subtests: happy path, fallback, all-fail, round-robin distribution, empty
+  body, regex extraction, regex no-match, byte-limit truncation). Uses
+  `net/http/httptest.NewServer` — no mocking framework, no network calls.
+- `bot` — **done.** `internal/bot/bot_test.go` covers `handlePiss` via the
+  `messageSender` interface (added alongside tests): formatted reply, scheme
+  stripping from display text, correct channel targeting, message reference,
+  no-ping behaviour, and error reply. White-box (`package bot`) to reach the
+  unexported handler directly.
 - `winsvc` — `RunService` accepts `isDebug=true` to run the service handler
   in-process without a real SCM; install/uninstall/start/stop require a live
   Windows SCM and are integration-test territory.
 - `platform` — `IsService` and `ServiceLogger` are thin wrappers; smoke tests
   confirm the right paths are chosen.
 
-**Current tradeoff.** Correctness is verified only by running the bot. A
-refactor or dependency update can silently break IP parsing, command matching,
-or log rotation with no automated signal.
+**Current tradeoff.** `ipservice` and `bot` message handling are covered.
+`onMessage` filtering (bot-self skip, case-insensitive match) and `platform`
+path selection are verified only by running the bot — the former relies on
+`discordgo.Session.State` which requires a live gateway connection to
+initialise, making it impractical to unit-test.
 
 **Implementation tradeoffs.** Test coverage for the Discord gateway interaction
-(`bot.Open`, `bot.Close`, message dispatch) is impractical without a real
-Discord connection or a significant mock of the `discordgo` session — that
-boundary is best left to manual smoke testing. Windows SCM tests require
-elevation and a real service manager; they belong in a separate integration-test
-binary or are accepted as manual-only. The practical target is full coverage of
-`ipservice` and meaningful coverage of `bot` message handling logic.
+(`bot.Open`, `bot.Close`, the `onMessage` dispatch chain) is impractical
+without a real Discord connection or a significant mock of the `discordgo`
+session — that boundary is best left to manual smoke testing. Windows SCM tests
+require elevation and a real service manager; they belong in a separate
+integration-test binary or are accepted as manual-only.
 
 ---
 

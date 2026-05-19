@@ -91,7 +91,8 @@ go install github.com/go-task/task/v3/cmd/task@latest
 | `task build:windows` | Cross-compiled Windows release binary → `dist/pissbot.exe` |
 | `task build:linux` | Cross-compiled Linux release binary → `dist/pissbot` |
 | `task release` | Both platform release binaries (tag first — see *Releasing* below) |
-| `task check` | `go vet` + `go test` |
+| `task test` | Run the test suite (`go test ./...`) |
+| `task check` | `go vet` + `go test` (vet then test) |
 | `task tidy` | `go mod tidy` |
 
 Run `task` with no arguments to list all available tasks.
