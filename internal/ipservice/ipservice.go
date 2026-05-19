@@ -44,7 +44,9 @@ func LoadSettings(path string) (*Settings, error) {
 	defer f.Close()
 
 	var s Settings
-	if err := json.NewDecoder(f).Decode(&s); err != nil {
+	dec := json.NewDecoder(f)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&s); err != nil {
 		return nil, fmt.Errorf("parse %q: %w", path, err)
 	}
 	if len(s.IPSources) == 0 {

@@ -49,6 +49,8 @@ func defaultLogPath() string {
 // rotateLogs renames logPath to logPath+".1" when the file exceeds maxLogBytes,
 // making room for a fresh log file. Only one backup generation is kept.
 // Failures are silently ignored — a stale large log is better than no log.
+// Go's os.Rename on Windows calls MoveFileExW with MOVEFILE_REPLACE_EXISTING,
+// so an existing .1 backup is replaced atomically; no prior os.Remove is needed.
 func rotateLogs(logPath string) {
 	info, err := os.Stat(logPath)
 	if err != nil || info.Size() < maxLogBytes {

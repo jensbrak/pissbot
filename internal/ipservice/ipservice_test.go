@@ -112,6 +112,35 @@ func TestLoadSettings(t *testing.T) {
 		}
 	})
 
+	t.Run("unknown fields rejected", func(t *testing.T) {
+		path := writeSettings(t, `{"ip_sources":["http://a.example.com"],"response_regxe":"\\d+"}`)
+		if _, err := ipservice.LoadSettings(path); err == nil {
+			t.Error("expected error for unknown field response_regxe")
+		}
+	})
+
+	t.Run("negative request_timeout_seconds defaults to 5", func(t *testing.T) {
+		path := writeSettings(t, `{"ip_sources":["http://example.com"],"request_timeout_seconds":-1}`)
+		s, err := ipservice.LoadSettings(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if s.RequestTimeoutSeconds != 5 {
+			t.Errorf("timeout: got %d, want 5", s.RequestTimeoutSeconds)
+		}
+	})
+
+	t.Run("negative response_max_bytes defaults to 256", func(t *testing.T) {
+		path := writeSettings(t, `{"ip_sources":["http://example.com"],"response_max_bytes":-1}`)
+		s, err := ipservice.LoadSettings(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if s.ResponseMaxBytes != 256 {
+			t.Errorf("max bytes: got %d, want 256", s.ResponseMaxBytes)
+		}
+	})
+
 	t.Run("invalid JSON", func(t *testing.T) {
 		path := writeSettings(t, `not json`)
 		if _, err := ipservice.LoadSettings(path); err == nil {
@@ -241,6 +270,40 @@ func TestGetPublicIP(t *testing.T) {
 		svc := newServiceWithRegex(t, []string{srv.URL}, `\d+\.\d+\.\d+\.\d+`)
 		if _, _, err := svc.GetPublicIP(context.Background()); err == nil {
 			t.Error("expected error when regex finds no match")
+		}
+	})
+
+	t.Run("whitespace-only response treated as empty", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprint(w, "   \n   ")
+		}))
+		defer srv.Close()
+
+		svc := newService(t, []string{srv.URL})
+		if _, _, err := svc.GetPublicIP(context.Background()); err == nil {
+			t.Error("expected error for whitespace-only response body")
+		}
+	})
+
+	t.Run("cancelled context fails immediately", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprint(w, "1.2.3.4")
+		}))
+		defer srv.Close()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		svc := newService(t, []string{srv.URL})
+		if _, _, err := svc.GetPublicIP(ctx); err == nil {
+			t.Error("expected error with already-cancelled context")
+		}
+	})
+
+	t.Run("malformed source URL returns error", func(t *testing.T) {
+		svc := newService(t, []string{"://not-a-url"})
+		if _, _, err := svc.GetPublicIP(context.Background()); err == nil {
+			t.Error("expected error for malformed source URL")
 		}
 	})
 

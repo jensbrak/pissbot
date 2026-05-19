@@ -114,12 +114,23 @@ func main() {
 
 	// Collect flags that should be baked into the service ImagePath on install
 	// so the SCM passes them automatically on every subsequent start.
+	// Paths are resolved to absolute here because the SCM starts the service
+	// from a different working directory (System32), so relative paths would
+	// not resolve correctly at runtime.
 	var installArgs []string
 	if *flagSettings != "" {
-		installArgs = append(installArgs, "-settings", *flagSettings)
+		abs, err := filepath.Abs(*flagSettings)
+		if err != nil {
+			fatalf("resolve -settings path: %v", err)
+		}
+		installArgs = append(installArgs, "-settings", abs)
 	}
 	if *flagLog != "" {
-		installArgs = append(installArgs, "-log", *flagLog)
+		abs, err := filepath.Abs(*flagLog)
+		if err != nil {
+			fatalf("resolve -log path: %v", err)
+		}
+		installArgs = append(installArgs, "-log", abs)
 	}
 
 	// Handle platform service management commands (no-op on non-Windows).
