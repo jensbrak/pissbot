@@ -8,7 +8,6 @@ package platform
 
 import (
 	"net"
-	"os"
 	"testing"
 	"time"
 )
