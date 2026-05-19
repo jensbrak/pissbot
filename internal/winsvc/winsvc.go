@@ -21,15 +21,16 @@ const (
 	SvcDescription = "Discord bot that reports the machine's public IP address on demand via !piss."
 )
 
-// Starter is implemented by App in the main package.
-type Starter interface {
+// appStarter is the subset of App that the SCM handler needs. Defined here
+// rather than imported from platform to avoid an import cycle.
+type appStarter interface {
 	Start() error
 	Stop()
 }
 
 // handler adapts App to the svc.Handler interface required by the SCM.
 type handler struct {
-	app    Starter
+	app    appStarter
 	logger *slog.Logger
 }
 
@@ -69,7 +70,7 @@ func (h *handler) Execute(_ []string, r <-chan svc.ChangeRequest, status chan<- 
 // RunService hands control to the Windows SCM.
 // Set isDebug=true to run the service handler in-process without the SCM
 // (useful for testing the service logic from a normal console session).
-func RunService(name string, isDebug bool, app Starter, logger *slog.Logger) error {
+func RunService(name string, isDebug bool, app appStarter, logger *slog.Logger) error {
 	h := &handler{app: app, logger: logger}
 	if isDebug {
 		return debug.Run(name, h)

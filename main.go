@@ -1,17 +1,21 @@
 // pissbot — Public IP Server Service
 //
 // A Discord bot that replies to !piss with the machine's current public IP
-// address. It can run interactively as a console app or be installed as a
-// native Windows service for unattended 24/7 operation.
+// address. Runs interactively as a console app or as a native service
+// (Windows SCM or Linux systemd) for unattended 24/7 operation.
 //
 // Usage:
 //
 //	pissbot                  # console mode (Ctrl+C to stop)
-//	pissbot -install         # install as Windows service (requires elevation)
+//	pissbot -version         # print version and exit
+//	pissbot -settings <path> # override the settings.json location
+//
+// Windows-only service management (requires elevation):
+//
+//	pissbot -install         # register as a Windows service
 //	pissbot -start           # start the installed service
 //	pissbot -stop            # stop the running service
-//	pissbot -uninstall       # remove the service (requires elevation)
-//	pissbot -settings <path> # override the settings.json location
+//	pissbot -uninstall       # remove the service
 package main
 
 import (
@@ -27,6 +31,9 @@ import (
 	"github.com/jensbrak/pissbot/internal/ipservice"
 	"github.com/jensbrak/pissbot/internal/platform"
 )
+
+// version is set at build time via -ldflags="-X main.version=x.y.z".
+var version = "dev"
 
 // ─── App ─────────────────────────────────────────────────────────────────────
 
@@ -84,6 +91,7 @@ func (a *App) Stop() {
 
 func main() {
 	var (
+		flagVersion   = flag.Bool("version", false, "print version and exit")
 		flagInstall   = flag.Bool("install", false, "install as a Windows service (requires elevation)")
 		flagUninstall = flag.Bool("uninstall", false, "uninstall the Windows service (requires elevation)")
 		flagStart     = flag.Bool("start", false, "start the Windows service")
@@ -91,6 +99,11 @@ func main() {
 		flagSettings  = flag.String("settings", "", "path to settings.json (default: <exe directory>/settings.json)")
 	)
 	flag.Parse()
+
+	if *flagVersion {
+		fmt.Println(version)
+		return
+	}
 
 	settingsPath := resolveSettingsPath(*flagSettings)
 
@@ -146,25 +159,20 @@ func runAsConsole(settingsPath string) {
 }
 
 func runAsService(settingsPath string) {
-	// When running under a service manager there is no console. Log to a file
-	// in the same directory as the executable so output is always findable.
 	exePath, err := os.Executable()
 	if err != nil {
 		os.Exit(1)
 	}
-	logPath := filepath.Join(filepath.Dir(exePath), "pissbot.log")
 
-	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	logger, closeLog, err := platform.ServiceLogger(
+		filepath.Join(filepath.Dir(exePath), "pissbot.log"),
+	)
 	if err != nil {
-		// Without a log file we cannot report the error anywhere useful.
 		os.Exit(1)
 	}
-	defer logFile.Close()
+	defer closeLog()
 
-	logger := slog.New(slog.NewTextHandler(logFile, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
-	logger.Info("service process started", "settings", settingsPath, "log", logPath)
+	logger.Info("service process started", "settings", settingsPath)
 
 	app, err := newApp(settingsPath, logger)
 	if err != nil {

@@ -12,6 +12,33 @@ import (
 	"github.com/jensbrak/pissbot/internal/winsvc"
 )
 
+// maxLogBytes is the file size at which the log is rotated on service startup.
+const maxLogBytes int64 = 10 << 20 // 10 MiB
+
+// ServiceLogger opens the log file at logPath (rotating it first if it exceeds
+// maxLogBytes) and returns a slog.Logger writing to that file, plus a closer
+// that must be called when the process exits.
+func ServiceLogger(logPath string) (*slog.Logger, func(), error) {
+	rotateLogs(logPath)
+	f, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, nil, fmt.Errorf("open log %q: %w", logPath, err)
+	}
+	logger := slog.New(slog.NewTextHandler(f, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	return logger, func() { f.Close() }, nil
+}
+
+// rotateLogs renames logPath to logPath+".1" when the file exceeds maxLogBytes,
+// making room for a fresh log file. Only one backup generation is kept.
+// Failures are silently ignored — a stale large log is better than no log.
+func rotateLogs(logPath string) {
+	info, err := os.Stat(logPath)
+	if err != nil || info.Size() < maxLogBytes {
+		return
+	}
+	_ = os.Rename(logPath, logPath+".1")
+}
+
 // IsService reports whether the process was launched by the Windows SCM.
 func IsService() (bool, error) {
 	return svc.IsWindowsService()
