@@ -127,14 +127,15 @@ independent of the commit it points at.
    git push origin v0.1.0
    ```
 
-3. Build the release binaries:
+3. Push the tag — the release workflow runs automatically and publishes
+   binaries to the GitHub Release page:
 
    ```bash
-   task release
+   git push origin v0.1.0
    ```
 
-   Binaries land in `dist/` — `pissbot.exe` (Windows) and `pissbot` (Linux),
-   both stamped with the tag via `-version`.
+   To build locally without CI, `task release` produces the same binaries
+   in `dist/`.
 
 ---
 
