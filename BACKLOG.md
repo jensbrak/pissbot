@@ -100,31 +100,3 @@ session — that boundary is best left to manual smoke testing. Windows SCM test
 require elevation and a real service manager; they belong in a separate
 integration-test binary or are accepted as manual-only.
 
----
-
-## CI and build artefacts
-
-**What.** A GitHub Actions workflow that builds, tests, and — on a tagged
-release — publishes signed binaries for Windows (amd64) and Linux (amd64,
-arm64). [goreleaser](https://goreleaser.com) is the idiomatic Go tool for the
-release step: it handles cross-compilation, archive packaging, checksum files,
-and GitHub Release creation from a single config file.
-
-**Why it makes sense.** Go's cross-compilation story is unusually clean
-(`GOOS`/`GOARCH` env vars, no C toolchain needed for this project), so
-producing both platform binaries from a single Linux CI runner is trivial.
-goreleaser integrates naturally with the existing `-ldflags="-X main.version=..."`
-version injection — it substitutes the git tag automatically. Without CI,
-releases are manual, untested builds from a developer machine.
-
-**Current tradeoff.** No automated test or build signal on push. Release
-binaries are produced manually. The `-ldflags` version string must be set by
-hand and can be forgotten, leaving binaries reporting `dev`.
-
-**Implementation tradeoffs.** goreleaser adds a `.goreleaser.yaml` config file
-and a dependency on the goreleaser tool in the CI environment (available as a
-standard GitHub Action). The workflow needs a `GITHUB_TOKEN` secret for
-publishing releases — present by default in GitHub Actions, no extra setup.
-Code signing for the Windows binary (Authenticode) is a separate concern that
-requires a paid certificate; it is worth knowing it exists but is out of scope
-for a personal-use bot.
