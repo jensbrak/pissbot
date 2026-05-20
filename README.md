@@ -85,6 +85,8 @@ Builds are managed with [Task](https://taskfile.dev). Install it once:
 go install github.com/go-task/task/v3/cmd/task@latest
 ```
 
+> **Linux:** `go install` places binaries in `~/go/bin/`, which may not be in your `PATH`. Some distributions also ship an unrelated package named `task` — if the command exists but behaves unexpectedly, that's likely the cause. Either run `~/go/bin/task` directly, add `~/go/bin` to your `PATH`, or see [taskfile.dev](https://taskfile.dev/installation/) for alternative install methods.
+
 | Command | What it does |
 |---|---|
 | `task build` | Fast dev build for the current platform (`-version` reports `dev`) |
