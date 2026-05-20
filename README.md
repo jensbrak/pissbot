@@ -4,6 +4,13 @@ A Discord bot that responds to `!piss` with the machine's current public IP
 address. Runs interactively in a console or as a native service that starts
 automatically on boot — Windows SCM and Linux systemd are both supported.
 
+pissbot is useful whenever you host services at home on a dynamic IP and need
+a way to share the current address with users. The simplest case is skipping
+DNS entirely — just ask the bot. It also bridges the gap when DNS is in place
+but hasn't caught up to a recent IP change. Either way, pissbot must run on
+the same network as the service — it reports the public IP of the machine it's
+running on.
+
 ---
 
 ## Prerequisites
